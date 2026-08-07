@@ -135,6 +135,9 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .slot-choices{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .slot-choices button{font-family:'Anton';font-size:18px;color:#22160a;background:var(--amber);padding:11px 18px;border-radius:6px;min-width:56px}
 .slot-choices button.dh{background:var(--felt2);color:var(--chalk);border:1px solid var(--line)}
+.cancelbtn{margin-top:14px;font-family:'Barlow Semi Condensed';font-weight:600;font-size:14px;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:9px 24px}
+.cancelbtn:hover{color:var(--chalk);border-color:var(--dim)}
+.modal .cline{font-family:'Space Mono';font-size:12px;color:var(--amber2)}.modal .cslash{color:var(--chalk)}
 .help-cats{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0 4px}
 .help-cats span{font-family:'Space Mono';font-size:12px;color:var(--amber2);border:1px solid var(--line);border-radius:4px;padding:4px 9px}
 .endcard{text-align:center}
@@ -163,7 +166,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 
 <div id="game">
   <div class="hdr">
-    <div class="logo">162<span>·0</span></div>
+    <button class="logo" id="logoBtn" title="Home — clears the current draft">162<span>·0</span></button>
     <div class="hicons">
       <button class="hic" id="helpBtn" title="How to play">?</button>
       <button class="hic" id="restartBtn" title="New season"></button>
@@ -249,33 +252,36 @@ function spinReel(panel,valEl,finalVal,cands,fmt,dur,cb){
   const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
   if(reduced){valEl.textContent=fmt(finalVal);cb&&cb();return;}
   panel.classList.add('spin');let t=0;clearInterval(panel._tmr);
-  panel._tmr=setInterval(()=>{valEl.textContent=fmt(cands[Math.random()*cands.length|0]);t+=55;
+  panel._tmr=setInterval(()=>{valEl.textContent=fmt(cands[Math.random()*cands.length|0]);t+=80;
     if(t>=dur){clearInterval(panel._tmr);panel.classList.remove('spin');
       valEl.textContent=fmt(finalVal);panel.classList.add('settle');
-      setTimeout(()=>panel.classList.remove('settle'),340);cb&&cb();}},55);
+      setTimeout(()=>panel.classList.remove('settle'),340);cb&&cb();}},80);
 }
+function pauseThen(cb){setTimeout(cb,matchMedia('(prefers-reduced-motion:reduce)').matches?0:1100);}
 function doRoll(){
   const team=newTeam();const vd=TEAMDECS.get(team);const dec=vd[Math.random()*vd.length|0];
   S.roll={team,dec};setPhase('rolling');setStage('');
   $('bigDec').textContent='—';
-  spinReel($('rollBig').querySelector('.team'),$('bigTeam'),team,TEAMS,x=>x,700,()=>{
-    spinReel($('rollBig').querySelector('.decade'),$('bigDec'),dec,vd,decLabel,560,()=>afterRoll(team,dec));});
+  spinReel($('rollBig').querySelector('.team'),$('bigTeam'),team,TEAMS,x=>x,1150,()=>{
+    spinReel($('rollBig').querySelector('.decade'),$('bigDec'),dec,vd,decLabel,950,()=>pauseThen(()=>afterRoll(team,dec)));});
 }
-function afterRoll(team,dec){S.roll={team,dec};
+function afterRoll(team,dec){if(S.phase!=='rolling')return;S.roll={team,dec};
   setPhase(poolFor(team,dec).length?'pick':'busted');
   S.search='';const _s=$('search');if(_s)_s.value='';
   renderRollCompact();renderControls();renderPool();renderTray();}
-function rerollTeam(){if(S.rerolls.team<1||S.phase==='rolling')return;S.rerolls.team--;
-  const D=S.roll.dec,pool=DECTEAMS.get(D),team=pool[Math.random()*pool.length|0];
+function rerollTeam(){if(S.rerolls.team<1||S.phase==='rolling')return;
+  const D=S.roll.dec,pool=DECTEAMS.get(D).filter(t=>t!==S.roll.team);if(!pool.length)return;S.rerolls.team--;
+  const team=pool[Math.random()*pool.length|0];
   S.roll.team=team;setPhase('rolling');setStage('');$('bigDec').textContent=decLabel(D);
-  spinReel($('rollBig').querySelector('.team'),$('bigTeam'),team,pool,x=>x,600,()=>afterRoll(team,D));}
-function rerollDecade(){if(S.rerolls.decade<1||S.phase==='rolling')return;S.rerolls.decade--;
-  const T=S.roll.team,pool=TEAMDECS.get(T),dec=pool[Math.random()*pool.length|0];
+  spinReel($('rollBig').querySelector('.team'),$('bigTeam'),team,pool,x=>x,1000,()=>pauseThen(()=>afterRoll(team,D)));}
+function rerollDecade(){if(S.rerolls.decade<1||S.phase==='rolling')return;
+  const T=S.roll.team,pool=TEAMDECS.get(T).filter(d=>d!==S.roll.dec);if(!pool.length)return;S.rerolls.decade--;
+  const dec=pool[Math.random()*pool.length|0];
   S.roll.dec=dec;setPhase('rolling');setStage('');$('bigTeam').textContent=T;
-  spinReel($('rollBig').querySelector('.decade'),$('bigDec'),dec,pool,decLabel,600,()=>afterRoll(T,dec));}
+  spinReel($('rollBig').querySelector('.decade'),$('bigDec'),dec,pool,decLabel,1000,()=>pauseThen(()=>afterRoll(T,dec)));}
 
 /* ---- draft ---- */
-function draft(card){const o=eligibleSlots(card);o.length===1?place(card,o[0]):chooseSlot(card,o);}
+function draft(card){chooseSlot(card,eligibleSlots(card));}
 function place(card,slot){S.roster[slot]=card;S.used.add(card.id);
   const filled=SLOTS.every(s=>S.roster[s]);renderTray();renderTop();
   if(filled){endSeason();return;}S.round++;doRoll();}
@@ -299,7 +305,9 @@ function renderControls(){
   const rt=$('rt'),rd=$('rd');
   rt.innerHTML=`${ICON} Team <span class="k">${S.rerolls.team}</span>`;
   rd.innerHTML=`${ICON} Decade <span class="k">${S.rerolls.decade}</span>`;
-  rt.disabled=S.rerolls.team<1;rd.disabled=S.rerolls.decade<1;
+  const oneDecade=(TEAMDECS.get(S.roll.team)||[]).length<2;
+  rt.disabled=S.rerolls.team<1;rd.disabled=S.rerolls.decade<1||oneDecade;
+  rd.title=oneDecade?'This team only played in one decade':'';
   rt.onclick=rerollTeam;rd.onclick=rerollDecade;
   if(S.phase==='busted'){setStage(`<span class="bust">No eligible bats left — ${abbr(S.roll.team)} · ${decLabel(S.roll.dec)}.</span><button class="rrl" id="respinBtn">Spin again — free</button>`);
     $('respinBtn').onclick=doRoll;} else setStage('');
@@ -333,14 +341,19 @@ function renderTray(){
   $('trayLineup').innerHTML=SLOTS.map(s=>{const c=S.roster[s];
     if(!c)return `<div class="lu empty"><span class="pos">${s}</span><span class="nm">open</span></div>`;
     return `<div class="lu"><span class="pos">${s}</span><span class="nm">${c.name}</span><span class="sub">${abbr(c.team)} '${String(c.yr).slice(2)} · ${c.HR}/${c.RBI}/${c.SB} ${fmt3(c.avg)}</span></div>`;}).join('');
-  const v=k=>t.n?((k==='AVG'||k==='OPS')?fmt3(t[k]):t[k]):'—';
+  const v=k=>{if(!t.n)return'—';return (k==='AVG'||k==='OPS')?fmt3(t[k]):Math.round(t[k]/t.n);};
   $('trayTotals').innerHTML=CATS.map(([k,l])=>`<div class="tt"><div class="v">${v(k)}</div><span class="l">${l}</span></div>`).join('');
   $('tray').classList.toggle('open',S.trayOpen);
 }
 function chooseSlot(card,opts){const m=$('modal');
-  m.innerHTML=`<h3>${card.name}</h3><p>${card.yr} ${card.team} — where does he bat?</p>
-   <div class="slot-choices">${opts.map(s=>`<button class="${s==='DH'?'dh':''}" data-s="${s}">${s}</button>`).join('')}</div>`;
-  m.querySelectorAll('button').forEach(b=>b.onclick=()=>{$('veil').classList.remove('show');place(card,b.dataset.s);});
+  const sl=`<span class="cslash">${fmt3(card.avg)}/${fmt3(card.obp)}/${fmt3(card.slg)}</span> · ${card.HR} HR · ${card.RBI} RBI · ${card.SB} SB · ${card.R} R`;
+  m.innerHTML=`<h3>${card.name}</h3>
+   <p>${card.yr} ${card.team} · ${card.pos.length?card.pos.join('/'):'DH only'}<br><span class="cline">${sl}</span></p>
+   <p style="margin-bottom:10px">Add to your lineup at:</p>
+   <div class="slot-choices">${opts.map(s=>`<button class="${s==='DH'?'dh':''}" data-s="${s}">${s}</button>`).join('')}</div>
+   <div><button class="cancelbtn" data-cancel>Cancel</button></div>`;
+  m.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{$('veil').classList.remove('show');place(card,b.dataset.s);});
+  m.querySelector('[data-cancel]').onclick=()=>$('veil').classList.remove('show');
   $('veil').classList.add('show');}
 function showHelp(){$('modal').innerHTML=`<h3>How to play</h3>
   <div class="lead"><p>Each of the 9 rounds spins a <b style="color:var(--green)">team</b> and a <b style="color:var(--orange)">decade</b>. Draft one bat from that team/decade into an open lineup spot — C, 1B, 2B, 3B, SS, LF, CF, RF, or DH. Each player brings his best season for that team in that decade, and can only play a position he actually played that year (DH takes anyone). No player twice.</p>
@@ -351,7 +364,7 @@ function showHelp(){$('modal').innerHTML=`<h3>How to play</h3>
   $('closeHelp').onclick=()=>$('veil').classList.remove('show');$('veil').classList.add('show');}
 function endSeason(){S.phase='done';const t=totals(),m=metCount(t),w=winsFor(m);
   const titles={6:'PERFECT SEASON',5:'PENNANT WINNERS',4:'PLAYOFF BOUND',3:'WINNING SEASON',2:'PLAYING .500',1:'REBUILDING YEAR',0:'CELLAR DWELLERS'};
-  const cats=CATS.map(([k,l])=>{const hit=t[k]>=BENCH[k];const val=(k==='AVG'||k==='OPS')?fmt3(t[k]):t[k];return `<span class="${hit?'hit':'miss'}">${l} ${val}</span>`;}).join('');
+  const cats=CATS.map(([k,l])=>{const hit=t[k]>=BENCH[k];const val=(k==='AVG'||k==='OPS')?fmt3(t[k]):Math.round(t[k]/t.n);return `<span class="${hit?'hit':'miss'}">${l} ${val}</span>`;}).join('');
   $('modal').innerHTML=`<div class="endcard"><div class="end-rec">${w}<span class="l">–${162-w}</span></div>
     <div class="end-title">${titles[m]}</div><p class="end-sub">${m} of 6 benchmarks cleared${m===6?' — the perfect season.':'.'}</p>
     <div class="end-cats">${cats}</div><button class="btn2" id="againBtn">New Season</button></div>`;
@@ -363,9 +376,10 @@ function confirmRestart(){if(totals().n===0){startGame();return;}
   $('modal').querySelector('[data-a=y]').onclick=()=>{$('veil').classList.remove('show');startGame();};
   $('modal').querySelector('[data-a=n]').onclick=()=>$('veil').classList.remove('show');
   $('veil').classList.add('show');}
+function goHome(){$('veil').classList.remove('show');reset();$('game').style.display='none';$('landing').style.display='flex';}
 function startGame(){reset();$('landing').style.display='none';$('game').style.display='flex';
   $('restartBtn').innerHTML=ICON;
-  $('helpBtn').onclick=showHelp;$('restartBtn').onclick=confirmRestart;
+  $('helpBtn').onclick=showHelp;$('restartBtn').onclick=confirmRestart;$('logoBtn').onclick=goHome;
   $('trayToggle').onclick=()=>{S.trayOpen=!S.trayOpen;renderTray();};
   $('search').value='';$('search').oninput=e=>{S.search=e.target.value;renderList();};
   $('sortSel').value=S.sort;$('sortSel').onchange=e=>{S.sort=e.target.value;renderList();};
