@@ -74,6 +74,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .rr .ic{color:var(--amber)} .rr:hover:not(:disabled){border-color:var(--amber);color:var(--amber2)} .rr:hover:not(:disabled) .ic{transform:rotate(-40deg);transition:transform .2s}
 .rr .k{font-family:'Space Mono';font-size:11px;color:var(--amber)}
 .rr:disabled{opacity:.32;cursor:not-allowed}
+.rr.rs{border-color:var(--orange)}.rr.rs .ic{color:var(--orange)}.rr.rs:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}
 #game.rolling #stageMsg,#game:not(.rolling) #stageMsg{}
 .stagemsg{flex:none;font-family:'Space Mono';font-size:12px;color:var(--dim);min-height:0;text-align:center;padding:2px 0}
 .stagemsg:empty{display:none}
@@ -87,6 +88,13 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .tabs{display:flex;gap:5px}
 .tab{font-family:'Barlow Semi Condensed';font-weight:600;font-size:12.5px;color:var(--dim);border:1px solid var(--line2);padding:6px 11px;border-radius:16px;transition:.15s}
 .tab:hover{color:var(--chalk)}.tab.active{background:var(--amber);color:#22160a;border-color:var(--amber)}
+.posbar{display:flex;gap:5px;overflow-x:auto;flex:none;padding:2px 0 8px}
+.posbar::-webkit-scrollbar{height:0}
+.pchip{flex:none;font-family:'Barlow Semi Condensed';font-weight:700;font-size:13px;letter-spacing:.03em;color:var(--dim);background:transparent;border:1px solid var(--line2);padding:6px 12px;border-radius:8px;transition:.12s}
+.pchip:hover:not(:disabled):not(.filled){color:var(--chalk);border-color:var(--dim)}
+.pchip.active{background:var(--amber);color:#22160a;border-color:var(--amber)}
+.pchip.filled{color:var(--amber2);border-color:var(--amber);box-shadow:inset 0 0 10px var(--glow),0 0 9px var(--glow);cursor:default}
+.pchip.filled::after{content:" ✓";font-size:10px}
 .search{flex:1;min-width:110px;font-family:'Barlow Semi Condensed';font-size:14px;color:var(--chalk);background:var(--felt);border:1px solid var(--line2);border-radius:18px;padding:7px 14px}
 .search::placeholder{color:var(--dimmer)}.search:focus{outline:none;border-color:var(--amber)}
 .sortsel{font-family:'Space Mono';font-size:12px;color:var(--amber2);background:var(--felt);border:1px solid var(--line2);border-radius:16px;padding:7px 8px}
@@ -141,7 +149,13 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .help-cats{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0 4px}
 .help-cats span{font-family:'Space Mono';font-size:12px;color:var(--amber2);border:1px solid var(--line);border-radius:4px;padding:4px 9px}
 .endcard{text-align:center}
-.end-rec{font-family:'Anton';font-size:clamp(70px,15vw,120px);line-height:.86;color:var(--amber);text-shadow:0 0 30px var(--glow)}
+.end-rec{font-family:'Anton';font-size:clamp(46px,12vw,82px);line-height:.86;color:var(--amber);text-shadow:0 0 30px var(--glow)}
+.end-lineup{display:flex;flex-direction:column;gap:1px;margin:12px 0 10px;text-align:left}
+.el{display:flex;align-items:center;gap:8px;padding:4px 4px;border-bottom:1px solid var(--line2)}
+.el .pos{font-family:'Anton';font-size:12px;color:var(--amber);width:26px;flex:none;text-align:center}
+.el .nm{flex:1;font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.el .tm{font-family:'Space Mono';font-size:10px;color:var(--dim);flex:none}
+.el .sl{font-family:'Space Mono';font-size:11.5px;color:var(--amber2);flex:none;min-width:118px;text-align:right}
 .end-rec .l{color:var(--red)}
 .end-title{font-family:'Anton';font-size:clamp(24px,5vw,36px);margin:6px 0 2px;color:var(--chalk)}
 .end-sub{color:var(--dim);margin:0 0 16px}
@@ -185,13 +199,14 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
     <div class="rerolls">
       <button class="rr" id="rt"></button>
       <button class="rr" id="rd"></button>
+      <button class="rr rs" id="rs"></button>
     </div>
   </div>
   <div class="stagemsg" id="stageMsg"></div>
 
   <div id="poolArea">
+    <div class="posbar" id="posbar"></div>
     <div class="pool-top">
-      <div class="tabs" id="tabs"></div>
       <input id="search" class="search" placeholder="Search player…" autocomplete="off">
       <select id="sortSel" class="sortsel">
         <option value="ops">OPS</option><option value="avg">AVG</option><option value="HR">HR</option>
@@ -222,6 +237,7 @@ const BENCH={R:891,HR:288,RBI:940,SB:180,AVG:0.315,OPS:0.935};
 const SLOTS=['C','1B','2B','3B','SS','LF','CF','RF','DH'];
 const INF=['1B','2B','3B','SS'],OFD=['LF','CF','RF'];
 const ICON='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>';
+const ICON2='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>';
 const CARDS=DATA.rows.map(r=>{const g=k=>r[COL[k]];
   const AB=g('AB'),H=g('H'),D2=g('2B'),T3=g('3B'),HR=g('HR'),BB=g('BB'),HBP=g('HBP'),SF=g('SF');
   const avg=AB?H/AB:0,obp=(AB+BB+HBP+SF)?(H+BB+HBP)/(AB+BB+HBP+SF):0,slg=AB?(H+D2+2*T3+3*HR)/AB:0;
@@ -235,13 +251,20 @@ const DECTEAMS=new Map(DECS.map(d=>[d,TEAMS.filter(t=>BYTD.has(t+'@'+d))]));
 
 let S;
 function reset(){S={round:1,roll:null,used:new Set(),roster:Object.fromEntries(SLOTS.map(s=>[s,null])),
-  rerolls:{team:1,decade:1},filter:'All',phase:'landing',sort:'ops',search:'',trayOpen:false};}
+  rerolls:{team:1,decade:1,super:1},filter:'All',phase:'landing',sort:'ops',search:'',trayOpen:false,
+  teamSeen:{},lastTeam:null};}
 reset();
 const $=id=>document.getElementById(id);
 const decLabel=d=>d+'s';
 const abbr=t=>ABBR[t]||t;
 const fmt3=x=>(Math.round(x*1000)/1000).toFixed(3).replace(/^0\./,'.');
 function newTeam(){return TEAMS[Math.random()*TEAMS.length|0];}
+function pickTeam(pool){
+  const cap=pool.filter(t=>(S.teamSeen[t]||0)<2);
+  const noRepeat=cap.filter(t=>t!==S.lastTeam);
+  const arr=noRepeat.length?noRepeat:(cap.length?cap:pool);
+  return arr[Math.random()*arr.length|0];
+}
 function openSlots(){return SLOTS.filter(s=>!S.roster[s]);}
 function eligibleSlots(card){return openSlots().filter(s=>s==='DH'||card.pos.includes(s));}
 function poolFor(team,dec){return (BYTD.get(team+'@'+dec)||[]).filter(c=>!S.used.has(c.id)&&eligibleSlots(c).length>0);}
@@ -259,7 +282,7 @@ function spinReel(panel,valEl,finalVal,cands,fmt,dur,cb){
 }
 function pauseThen(cb){setTimeout(cb,matchMedia('(prefers-reduced-motion:reduce)').matches?0:1100);}
 function doRoll(){
-  const team=newTeam();const vd=TEAMDECS.get(team);const dec=vd[Math.random()*vd.length|0];
+  const team=pickTeam(TEAMS);const vd=TEAMDECS.get(team);const dec=vd[Math.random()*vd.length|0];
   S.roll={team,dec};setPhase('rolling');setStage('');
   $('bigDec').textContent='—';
   spinReel($('rollBig').querySelector('.team'),$('bigTeam'),team,TEAMS,x=>x,1150,()=>{
@@ -271,9 +294,10 @@ function afterRoll(team,dec){if(S.phase!=='rolling')return;S.roll={team,dec};
   renderRollCompact();renderControls();renderPool();renderTray();}
 function rerollTeam(){if(S.rerolls.team<1||S.phase==='rolling')return;
   const D=S.roll.dec,pool=DECTEAMS.get(D).filter(t=>t!==S.roll.team);if(!pool.length)return;S.rerolls.team--;
-  const team=pool[Math.random()*pool.length|0];
+  const team=pickTeam(pool);
   S.roll.team=team;setPhase('rolling');setStage('');$('bigDec').textContent=decLabel(D);
   spinReel($('rollBig').querySelector('.team'),$('bigTeam'),team,pool,x=>x,1000,()=>pauseThen(()=>afterRoll(team,D)));}
+function superRoll(){if(S.rerolls.super<1||S.phase==='rolling')return;S.rerolls.super--;doRoll();}
 function rerollDecade(){if(S.rerolls.decade<1||S.phase==='rolling')return;
   const T=S.roll.team,pool=TEAMDECS.get(T).filter(d=>d!==S.roll.dec);if(!pool.length)return;S.rerolls.decade--;
   const dec=pool[Math.random()*pool.length|0];
@@ -283,6 +307,7 @@ function rerollDecade(){if(S.rerolls.decade<1||S.phase==='rolling')return;
 /* ---- draft ---- */
 function draft(card){chooseSlot(card,eligibleSlots(card));}
 function place(card,slot){S.roster[slot]=card;S.used.add(card.id);
+  S.teamSeen[S.roll.team]=(S.teamSeen[S.roll.team]||0)+1;S.lastTeam=S.roll.team;
   const filled=SLOTS.every(s=>S.roster[s]);renderTray();renderTop();
   if(filled){endSeason();return;}S.round++;doRoll();}
 
@@ -302,21 +327,28 @@ function renderTop(){$('roundNum').textContent=S.round;}
 function renderRollCompact(){$('pillTeam').textContent=abbr(S.roll.team);$('pillTeam').title=S.roll.team;
   $('pillDec').textContent=decLabel(S.roll.dec);}
 function renderControls(){
-  const rt=$('rt'),rd=$('rd');
+  const rt=$('rt'),rd=$('rd'),rs=$('rs');
   rt.innerHTML=`${ICON} Team <span class="k">${S.rerolls.team}</span>`;
   rd.innerHTML=`${ICON} Decade <span class="k">${S.rerolls.decade}</span>`;
+  rs.innerHTML=`${ICON2} Super <span class="k">${S.rerolls.super}</span>`;
   const oneDecade=(TEAMDECS.get(S.roll.team)||[]).length<2;
-  rt.disabled=S.rerolls.team<1;rd.disabled=S.rerolls.decade<1||oneDecade;
-  rd.title=oneDecade?'This team only played in one decade':'';
-  rt.onclick=rerollTeam;rd.onclick=rerollDecade;
+  rt.disabled=S.rerolls.team<1;rd.disabled=S.rerolls.decade<1||oneDecade;rs.disabled=S.rerolls.super<1;
+  rd.title=oneDecade?'This team only played in one decade':'';rs.title='Reroll team AND decade';
+  rt.onclick=rerollTeam;rd.onclick=rerollDecade;rs.onclick=superRoll;
   if(S.phase==='busted'){setStage(`<span class="bust">No eligible bats left — ${abbr(S.roll.team)} · ${decLabel(S.roll.dec)}.</span><button class="rrl" id="respinBtn">Spin again — free</button>`);
     $('respinBtn').onclick=doRoll;} else setStage('');
 }
-function inCat(c,cat){if(cat==='All')return true;if(cat==='C')return c.pos.includes('C');
-  if(cat==='IF')return c.pos.some(p=>INF.includes(p));if(cat==='OF')return c.pos.some(p=>OFD.includes(p));return true;}
-function renderTabs(){const cats=['All','C','IF','OF'];
-  $('tabs').innerHTML=cats.map(c=>`<button class="tab ${S.filter===c?'active':''}" data-c="${c}">${c}</button>`).join('');
-  $('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.filter=b.dataset.c;renderTabs();renderList();});}
+function inCat(c,cat){return cat==='All'?true:eligibleSlots(c).includes(cat);}
+function renderPosBar(){
+  if(S.filter!=='All'&&S.roster[S.filter])S.filter='All';
+  const chips=['All',...SLOTS];
+  $('posbar').innerHTML=chips.map(c=>{
+    if(c==='All')return `<button class="pchip ${S.filter==='All'?'active':''}" data-p="All">All</button>`;
+    const filled=!!S.roster[c],active=S.filter===c;
+    return `<button class="pchip ${filled?'filled':''} ${active?'active':''}" data-p="${c}"${filled?' disabled':''}>${c}</button>`;
+  }).join('');
+  $('posbar').querySelectorAll('.pchip:not([disabled])').forEach(b=>b.onclick=()=>{S.filter=b.dataset.p;renderPosBar();renderList();});
+}
 const SORTKEY={ops:'ops',avg:'avg',HR:'HR',RBI:'RBI',R:'R',SB:'SB',AB:'AB'};
 function renderList(){
   if(S.phase!=='pick'){$('list').innerHTML='';$('avail').textContent='';return;}
@@ -334,7 +366,7 @@ function renderList(){
     </div>`;}).join('');
   $('list').querySelectorAll('.prow').forEach(el=>el.onclick=()=>draft(pool[+el.dataset.i]));
 }
-function renderPool(){renderTabs();renderList();}
+function renderPool(){renderPosBar();renderList();}
 function renderTray(){
   const t=totals();
   $('traySlots').textContent=`${t.n} / 9`;
@@ -364,9 +396,11 @@ function showHelp(){$('modal').innerHTML=`<h3>How to play</h3>
   $('closeHelp').onclick=()=>$('veil').classList.remove('show');$('veil').classList.add('show');}
 function endSeason(){S.phase='done';const t=totals(),m=metCount(t),w=winsFor(m);
   const titles={6:'PERFECT SEASON',5:'PENNANT WINNERS',4:'PLAYOFF BOUND',3:'WINNING SEASON',2:'PLAYING .500',1:'REBUILDING YEAR',0:'CELLAR DWELLERS'};
+  const lineup=SLOTS.map(s=>{const c=S.roster[s];return `<div class="el"><span class="pos">${s}</span><span class="nm">${c.name}</span><span class="tm">${abbr(c.team)} '${String(c.yr).slice(2)}</span><span class="sl">${fmt3(c.avg)}/${fmt3(c.obp)}/${fmt3(c.slg)}</span></div>`;}).join('');
   const cats=CATS.map(([k,l])=>{const hit=t[k]>=BENCH[k];const val=(k==='AVG'||k==='OPS')?fmt3(t[k]):Math.round(t[k]/t.n);return `<span class="${hit?'hit':'miss'}">${l} ${val}</span>`;}).join('');
   $('modal').innerHTML=`<div class="endcard"><div class="end-rec">${w}<span class="l">–${162-w}</span></div>
     <div class="end-title">${titles[m]}</div><p class="end-sub">${m} of 6 benchmarks cleared${m===6?' — the perfect season.':'.'}</p>
+    <div class="end-lineup">${lineup}</div>
     <div class="end-cats">${cats}</div><button class="btn2" id="againBtn">New Season</button></div>`;
   $('veil').classList.add('show');$('againBtn').onclick=()=>{$('veil').classList.remove('show');startGame();};}
 
@@ -383,7 +417,7 @@ function startGame(){reset();$('landing').style.display='none';$('game').style.d
   $('trayToggle').onclick=()=>{S.trayOpen=!S.trayOpen;renderTray();};
   $('search').value='';$('search').oninput=e=>{S.search=e.target.value;renderList();};
   $('sortSel').value=S.sort;$('sortSel').onchange=e=>{S.sort=e.target.value;renderList();};
-  renderTop();renderTray();renderTabs();doRoll();}
+  renderTop();renderTray();renderPosBar();doRoll();}
 $('startBtn').onclick=startGame;
 })();
 </script>
