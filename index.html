@@ -130,7 +130,10 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .tray-totals{display:flex;gap:0;border-top:1px solid var(--line2);padding:8px 0 10px}
 .tt{flex:1;text-align:center;border-right:1px solid var(--line2)}
 .tt:last-child{border-right:none}
-.tt .v{font-family:'Anton';font-size:clamp(15px,4.2vw,20px);color:var(--chalk);line-height:1}
+.tt .v{font-family:'Anton';font-size:clamp(15px,4.2vw,20px);color:var(--chalk);line-height:1;transition:color .35s,text-shadow .35s}
+.tt.met .v{color:var(--green);text-shadow:0 0 12px var(--greenglow),0 0 4px var(--greenglow)}
+.tt.met .l{color:var(--green)}
+.tt.lag .v{color:#c76a58;text-shadow:0 0 8px rgba(140,34,22,.5)}
 .tt .l{font-family:'Space Mono';font-size:9px;letter-spacing:.08em;color:var(--dimmer);margin-top:3px;display:block}
 
 /* MODALS */
@@ -383,7 +386,9 @@ function renderTray(){
     if(!c)return `<div class="lu empty"><span class="pos">${s}</span><span class="nm">open</span></div>`;
     return `<div class="lu"><span class="pos">${s}</span><span class="nm">${c.name}</span><span class="sub">${abbr(c.team)} '${String(c.yr).slice(2)} · ${c.HR}/${c.RBI}/${c.SB} ${fmt3(c.avg)}</span></div>`;}).join('');
   const v=k=>{if(!t.n)return'—';return (k==='AVG'||k==='OPS')?fmt3(t[k]):Math.round(t[k]/t.n);};
-  $('trayTotals').innerHTML=CATS.map(([k,l])=>`<div class="tt"><div class="v">${v(k)}</div><span class="l">${l}</span></div>`).join('');
+  const onPace=k=>{if(!t.n)return null;const pv=(k==='AVG'||k==='OPS')?t[k]:t[k]/t.n,pb=(k==='AVG'||k==='OPS')?BENCH[k]:BENCH[k]/9;return pv>=pb;};
+  $('trayTotals').innerHTML=CATS.map(([k,l])=>{const p=onPace(k);const cls=p===null?'':(p?'met':'lag');
+    return `<div class="tt ${cls}"><div class="v">${v(k)}</div><span class="l">${l}</span></div>`;}).join('');
   $('tray').classList.toggle('open',S.trayOpen);
 }
 function chooseSlot(card,opts){const m=$('modal');
