@@ -99,10 +99,9 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .search::placeholder{color:var(--dimmer)}.search:focus{outline:none;border-color:var(--amber)}
 .sortsel{font-family:'Space Mono';font-size:12px;color:var(--amber2);background:var(--felt);border:1px solid var(--line2);border-radius:16px;padding:7px 8px}
 .avail{flex:none;font-family:'Space Mono';font-size:10.5px;letter-spacing:.14em;color:var(--dimmer);padding:8px 2px 6px}
-.listwrap{flex:1;min-height:0;overflow:auto;border:1px solid var(--line2);border-radius:8px;background:var(--felt)}
-.prow{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line2);cursor:pointer;transition:background .1s}
-.prow:last-child{border-bottom:none}
-.prow:hover{background:rgba(242,177,58,.08)}
+.listwrap{flex:1;min-height:0;overflow:auto;border-radius:8px;display:flex;flex-direction:column;gap:8px;padding:4px 0}
+.prow{display:flex;align-items:center;gap:8px;padding:12px 14px;border:1px solid var(--line2);border-radius:10px;cursor:pointer;transition:transform .12s,border-color .15s,box-shadow .15s;background:linear-gradient(180deg,var(--felt2),var(--felt))}
+.prow:hover{border-color:var(--amber);transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .pinfo{flex:1;min-width:0}
 .pinfo .nm{font-family:'Barlow Semi Condensed';font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
 .pinfo .pos{font-family:'Space Mono';font-size:10.5px;color:var(--green);letter-spacing:.04em;margin-top:2px}
@@ -154,7 +153,8 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .endcard{text-align:center}
 .end-rec{font-family:'Anton';font-size:clamp(46px,12vw,82px);line-height:.86;color:var(--amber);text-shadow:0 0 30px var(--glow)}
 .end-lineup{display:flex;flex-direction:column;gap:1px;margin:10px 0;text-align:left}
-.el,.elhead{display:flex;align-items:baseline;gap:8px;padding:4px 2px;border-bottom:1px solid var(--line2)}
+.el,.elhead{display:flex;align-items:baseline;gap:8px;padding:4px 2px;border-bottom:1px solid var(--line2);border-radius:4px}
+.el{background:linear-gradient(90deg,var(--elglow,transparent) 0%,transparent 60%);transition:background .3s}
 .elhead{border-bottom-color:var(--line)}
 .el .pos,.elhead .pos{font-family:'Anton';font-size:12px;color:var(--amber);width:22px;flex:none;text-align:center}
 .el .who{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -411,7 +411,14 @@ function showHelp(){$('modal').innerHTML=`<h3>How to play</h3>
 function endSeason(){S.phase='done';const t=totals(),m=metCount(t),w=winsFor(m);
   const titles={6:'PERFECT SEASON',5:'PENNANT WINNERS',4:'PLAYOFF BOUND',3:'WINNING SEASON',2:'PLAYING .500',1:'REBUILDING YEAR',0:'CELLAR DWELLERS'};
   const head=`<div class="elhead"><span class="pos"></span><span class="who">PLAYER · TEAM</span><span class="st"><i>R</i><i>HR</i><i>RBI</i><i>SB</i><i>AVG</i><i>OPS</i></span></div>`;
-  const lineup=SLOTS.map(s=>{const c=S.roster[s];return `<div class="el"><span class="pos">${s}</span><span class="who"><b class="nm">${c.name}</b><span class="tm">${abbr(c.team)} '${String(c.yr).slice(2)}</span></span><span class="st"><i>${c.R}</i><i>${c.HR}</i><i>${c.RBI}</i><i>${c.SB}</i><i>${fmt3(c.avg)}</i><i>${fmt3(c.ops)}</i></span></div>`;}).join('');
+  const scores=SLOTS.map(s=>{const c=S.roster[s];
+    return (c.R/(BENCH.R/9))+(c.HR/(BENCH.HR/9))+(c.RBI/(BENCH.RBI/9))+(c.SB/(BENCH.SB/9))+(c.avg/BENCH.AVG)+(c.ops/BENCH.OPS);});
+  const sMin=Math.min(...scores),sMax=Math.max(...scores);
+  const lineup=SLOTS.map((s,idx)=>{const c=S.roster[s];
+    const pct=sMax>sMin?(scores[idx]-sMin)/(sMax-sMin):0.5;
+    const r=Math.round(60+140*(1-pct)),g=Math.round(80+120*pct),b2=Math.round(40+30*pct);
+    const glow=`rgba(${r},${g},${b2},${(0.06+0.12*pct).toFixed(2)})`;
+    return `<div class="el" style="--elglow:${glow}"><span class="pos">${s}</span><span class="who"><b class="nm">${c.name}</b><span class="tm">${abbr(c.team)} '${String(c.yr).slice(2)}</span></span><span class="st"><i>${c.R}</i><i>${c.HR}</i><i>${c.RBI}</i><i>${c.SB}</i><i>${fmt3(c.avg)}</i><i>${fmt3(c.ops)}</i></span></div>`;}).join('');
   const cats=CATS.map(([k,l])=>{const hit=t[k]>=BENCH[k];const val=(k==='AVG'||k==='OPS')?fmt3(t[k]):Math.floor(t[k]/t.n);return `<span class="${hit?'hit':'miss'}">${l} ${val}</span>`;}).join('');
   $('modal').innerHTML=`<div class="endcard"><div class="end-rec">${w}<span class="l">–${162-w}</span></div>
     <div class="end-title">${titles[m]}</div><p class="end-sub">${m} of 6 benchmarks cleared${m===6?' — the perfect season.':'.'}</p>
