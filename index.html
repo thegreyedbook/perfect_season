@@ -36,6 +36,29 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .btn-start{margin-top:26px;font-family:'Anton';font-size:24px;letter-spacing:.06em;color:#22160a;background:linear-gradient(180deg,var(--amber2),var(--amber));padding:15px 40px;border-radius:6px;box-shadow:0 0 0 3px rgba(0,0,0,.25),0 0 26px var(--glow),var(--shadow);transition:transform .12s,box-shadow .2s}
 .btn-start:hover{transform:translateY(-2px)}
 .foot{position:absolute;bottom:16px;color:var(--dimmer);font-size:12.5px}
+.career{margin-top:22px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.career .cs{text-align:center}
+.career .cn{font-family:'Anton';font-size:clamp(22px,5vw,32px);color:var(--amber);line-height:1}
+.career .cl{font-family:'Space Mono';font-size:10px;letter-spacing:.14em;color:var(--dimmer);margin-top:3px}
+.career .cn.perf{color:var(--green)}
+.hof-btn{margin-top:16px;font-family:'Barlow Semi Condensed';font-weight:600;font-size:14px;color:var(--amber2);border:1px solid var(--line);border-radius:20px;padding:8px 20px;transition:.15s}
+.hof-btn:hover{border-color:var(--amber);color:var(--amber)}
+.hof-empty{color:var(--dimmer);font-style:italic;padding:16px 0}
+.hof-entry{border:1px solid var(--line2);border-radius:10px;padding:14px 12px;margin-bottom:12px;background:linear-gradient(180deg,var(--felt2),var(--felt));text-align:left}
+.hof-entry .hof-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.hof-entry .hof-rank{font-family:'Anton';font-size:28px;color:var(--amber);line-height:1}
+.hof-entry .hof-rec{font-family:'Anton';font-size:22px;color:var(--chalk);line-height:1}
+.hof-entry .hof-rec .l{color:var(--red)}
+.hof-entry .hof-date{font-family:'Space Mono';font-size:10px;color:var(--dimmer);margin-left:auto}
+.hof-entry .hof-title{font-family:'Anton';font-size:14px;color:var(--dim);letter-spacing:.04em}
+.hof-roster{margin-top:6px}
+.hof-roster .hr{display:flex;align-items:baseline;gap:6px;padding:2px 0;font-size:13px}
+.hof-roster .hr .pos{font-family:'Anton';font-size:11px;color:var(--amber);width:22px;flex:none}
+.hof-roster .hr .nm{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hof-roster .hr .sl{font-family:'Space Mono';font-size:11px;color:var(--amber2);flex:none}
+.hof-cats{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.hof-cats span{font-family:'Space Mono';font-size:10px;padding:3px 7px;border-radius:3px;border:1px solid var(--line);color:var(--dim)}
+.hof-cats span.hit{color:#22160a;background:var(--amber);border-color:var(--amber)}
 
 /* SHELL */
 #game{display:none;flex-direction:column;height:100dvh;max-width:900px;margin:0 auto;padding:8px 12px 0}
@@ -183,6 +206,8 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
   <div class="bulbs"><i></i><i></i><i></i><i></i><i></i></div>
   <p class="tagline">Spin a <b>team</b> and a <b>decade</b>, draft a nine-man lineup from the best bats of the '80s, '90s, and 2000s, and chase the only record that matters: <b>162 and 0</b>.</p>
   <button class="btn-start" id="startBtn">Start Season</button>
+  <div class="career" id="career"></div>
+  <button class="hof-btn" id="hofLandingBtn" style="display:none">🏆 Hall of Fame</button>
   <div class="foot">Every stat is a real season, 1980–2009 · Offense only · No pitchers</div>
 </div>
 
@@ -190,6 +215,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
   <div class="hdr">
     <button class="logo" id="logoBtn" title="Home — clears the current draft">162<span>·0</span></button>
     <div class="hicons">
+      <button class="hic" id="hofBtn" title="Hall of Fame">🏆</button>
       <button class="hic" id="helpBtn" title="How to play">?</button>
       <button class="hic" id="restartBtn" title="New season"></button>
     </div>
@@ -264,6 +290,47 @@ function reset(){S={round:1,roll:null,used:new Set(),roster:Object.fromEntries(S
   teamSeen:{},lastTeam:null};}
 reset();
 const $=id=>document.getElementById(id);
+
+// ---- PERSISTENCE (localStorage) ----
+const STORE_KEY='_162_0_career';
+function loadCareer(){try{return JSON.parse(localStorage.getItem(STORE_KEY))||defaultCareer();}catch(e){return defaultCareer();}}
+function defaultCareer(){return {drafts:0,perfectSeasons:0,bestWins:0,hof:[]};}
+function saveCareer(c){try{localStorage.setItem(STORE_KEY,JSON.stringify(c));}catch(e){}}
+function recordSeason(wins,title,batMet,roster,cats){
+  const c=loadCareer(); c.drafts++;
+  if(wins>c.bestWins) c.bestWins=wins;
+  if(wins===162) c.perfectSeasons++;
+  const entry={wins,title,batMet,date:new Date().toLocaleDateString(),
+    roster:SLOTS.map(s=>{const p=roster[s];return {slot:s,name:p.name,team:p.team,yr:p.yr,R:p.R,HR:p.HR,RBI:p.RBI,SB:p.SB,avg:p.avg,ops:p.ops};}),
+    cats:cats.map(([k,l,val,hit])=>({k,l,val,hit}))};
+  c.hof.push(entry);
+  c.hof.sort((a,b)=>b.wins-a.wins||b.batMet-a.batMet);
+  if(c.hof.length>3) c.hof.length=3;
+  saveCareer(c); return c;
+}
+function renderCareerLanding(){
+  const c=loadCareer();
+  if(!c.drafts){$('career').innerHTML='';$('hofLandingBtn').style.display='none';return;}
+  $('career').innerHTML=`
+    <div class="cs"><div class="cn">${c.drafts}</div><div class="cl">SEASONS</div></div>
+    <div class="cs"><div class="cn">${c.bestWins}-${162-c.bestWins}</div><div class="cl">BEST RECORD</div></div>
+    <div class="cs"><div class="cn perf">${c.perfectSeasons}</div><div class="cl">PERFECT</div></div>`;
+  $('hofLandingBtn').style.display=c.hof.length?'':'none';
+}
+function renderHofEntry(e,rank){
+  const rows=e.roster.map(r=>`<div class="hr"><span class="pos">${r.slot}</span><span class="nm">${r.name}</span><span class="sl">${r.R}/${r.HR}/${r.RBI}/${r.SB} ${(Math.round(r.avg*1000)/1000).toFixed(3).replace(/^0\./,'.')}</span></div>`).join('');
+  const cats=e.cats.map(c=>`<span class="${c.hit?'hit':''}">${c.l} ${c.val}</span>`).join('');
+  return `<div class="hof-entry"><div class="hof-head"><span class="hof-rank">#${rank}</span><span class="hof-rec">${e.wins}<span class="l">–${162-e.wins}</span></span><span class="hof-title">${e.title}</span><span class="hof-date">${e.date}</span></div><div class="hof-roster">${rows}</div><div class="hof-cats">${cats}</div></div>`;
+}
+function showHof(){
+  const c=loadCareer();
+  const entries=c.hof.length?c.hof.map((e,i)=>renderHofEntry(e,i+1)).join(''):`<div class="hof-empty">No seasons completed yet. Draft your first lineup to start building your legacy.</div>`;
+  $('modal').innerHTML=`<h3>🏆 Hall of Fame</h3>
+    <p style="margin-bottom:14px">Top 3 all-time lineups</p>${entries}
+    <button class="btn2" id="closeHof">Close</button>`;
+  $('closeHof').onclick=()=>$('veil').classList.remove('show');
+  $('veil').classList.add('show');
+}
 const decLabel=d=>d+'s';
 const abbr=t=>ABBR[t]||t;
 const fmt3=x=>(Math.round(x*1000)/1000).toFixed(3).replace(/^0\./,'.');
@@ -419,7 +486,9 @@ function endSeason(){S.phase='done';const t=totals(),m=metCount(t),w=winsFor(m);
     const r=Math.round(60+140*(1-pct)),g=Math.round(80+120*pct),b2=Math.round(40+30*pct);
     const glow=`rgba(${r},${g},${b2},${(0.06+0.12*pct).toFixed(2)})`;
     return `<div class="el" style="--elglow:${glow}"><span class="pos">${s}</span><span class="who"><b class="nm">${c.name}</b><span class="tm">${abbr(c.team)} '${String(c.yr).slice(2)}</span></span><span class="st"><i>${c.R}</i><i>${c.HR}</i><i>${c.RBI}</i><i>${c.SB}</i><i>${fmt3(c.avg)}</i><i>${fmt3(c.ops)}</i></span></div>`;}).join('');
-  const cats=CATS.map(([k,l])=>{const hit=t[k]>=BENCH[k];const val=(k==='AVG'||k==='OPS')?fmt3(t[k]):Math.floor(t[k]/t.n);return `<span class="${hit?'hit':'miss'}">${l} ${val}</span>`;}).join('');
+  const catData=CATS.map(([k,l])=>{const hit=t[k]>=BENCH[k];const val=(k==='AVG'||k==='OPS')?fmt3(t[k]):Math.floor(t[k]/t.n);return [k,l,val,hit];});
+  const cats=catData.map(([k,l,val,hit])=>`<span class="${hit?'hit':'miss'}">${l} ${val}</span>`).join('');
+  recordSeason(w,titles[m],m,S.roster,catData);
   $('modal').innerHTML=`<div class="endcard"><div class="end-rec">${w}<span class="l">–${162-w}</span></div>
     <div class="end-title">${titles[m]}</div><p class="end-sub">${m} of 6 benchmarks cleared${m===6?' — the perfect season.':'.'}</p>
     <div class="end-lineup">${head}${lineup}</div>
@@ -432,14 +501,17 @@ function confirmRestart(){if(totals().n===0){startGame();return;}
   $('modal').querySelector('[data-a=y]').onclick=()=>{$('veil').classList.remove('show');startGame();};
   $('modal').querySelector('[data-a=n]').onclick=()=>$('veil').classList.remove('show');
   $('veil').classList.add('show');}
-function goHome(){$('veil').classList.remove('show');reset();$('game').style.display='none';$('landing').style.display='flex';}
+function goHome(){$('veil').classList.remove('show');reset();$('game').style.display='none';$('landing').style.display='flex';renderCareerLanding();}
 function startGame(){reset();$('landing').style.display='none';$('game').style.display='flex';
   $('restartBtn').innerHTML=ICON;
   $('helpBtn').onclick=showHelp;$('restartBtn').onclick=confirmRestart;$('logoBtn').onclick=goHome;
+  $('hofBtn').onclick=showHof;
   $('trayToggle').onclick=()=>{S.trayOpen=!S.trayOpen;renderTray();};
   $('search').value='';$('search').oninput=e=>{S.search=e.target.value;renderList();};
   $('sortSel').value=S.sort;$('sortSel').onchange=e=>{S.sort=e.target.value;renderList();};
   renderTop();renderTray();renderPosBar();doRoll();}
+renderCareerLanding();
+$('hofLandingBtn').onclick=showHof;
 $('startBtn').onclick=startGame;
 })();
 </script>
